@@ -1,9 +1,7 @@
 package osl
 
 import (
-	"bytes"
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"runtime"
@@ -704,7 +702,7 @@ func TestOslDerived(t *testing.T) {
 	}
 }
 
-func TestJourneyId(t *testing.T) {
+func TestOslJourneyId(t *testing.T) {
 	tc, osl := testMakeFirstOslEx(t, testNoTees)
 
 	id := uuid.New().String()
@@ -722,7 +720,7 @@ func TestJourneyId(t *testing.T) {
 	}
 }
 
-func TestLogLaneJourneyIdDerived(t *testing.T) {
+func TestOslJourneyIdDerived(t *testing.T) {
 	tc, osl := testMakeFirstOslEx(t, testNoTees)
 
 	id := uuid.New().String()
@@ -745,209 +743,7 @@ func TestLogLaneJourneyIdDerived(t *testing.T) {
 	}
 }
 
-func TestLogLaneSetLevel(t *testing.T) {
-	ll := lane.NewLogLane(context.Background())
-
-	level := ll.SetLogLevel(lane.LogLevelFatal)
-	if level != lane.LogLevelTrace {
-		t.Error("Log level not initially trace")
-	}
-
-	level = ll.SetLogLevel(lane.LogLevelDebug)
-	if level != lane.LogLevelFatal {
-		t.Error("Log level was not fatal")
-	}
-
-	level = ll.SetLogLevel(lane.LogLevelDebug)
-	if level != lane.LogLevelDebug {
-		t.Error("Log level was not debug")
-	}
-}
-
-func TestLogLaneInheritLevel(t *testing.T) {
-	tc := testClient{}
-	tc.install(t)
-	cfg := OslConfig{
-		OpenSearchUrl:  "localhost",
-		OpenSearchPort: 1000,
-	}
-	osl, err := NewOpenSearchLane(context.Background(), &cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	level := osl.SetLogLevel(lane.LogLevelFatal)
-	if level != lane.LogLevelTrace {
-		t.Error("Log level not initially trace")
-	}
-
-	ll2 := osl.Derive()
-
-	level = ll2.SetLogLevel(lane.LogLevelDebug)
-	if level != lane.LogLevelFatal {
-		t.Error("Log level 2 was not fatal")
-	}
-}
-
-func TestLogLaneWithCancel(t *testing.T) {
-	ll := lane.NewLogLane(context.Background())
-
-	level := ll.SetLogLevel(lane.LogLevelFatal)
-	if level != lane.LogLevelTrace {
-		t.Error("Log level not initially trace")
-	}
-
-	ll2, cancel := ll.DeriveWithCancel()
-
-	isDone := make(chan struct{})
-
-	go func() {
-		<-ll2.Done()
-		isDone <- struct{}{}
-	}()
-
-	level = ll2.SetLogLevel(lane.LogLevelDebug)
-	if level != lane.LogLevelFatal {
-		t.Error("Log level 2 was not fatal")
-	}
-
-	time.Sleep(time.Millisecond)
-	cancel()
-
-	<-isDone
-}
-
-func TestLogLaneWithTimeoutCancel(t *testing.T) {
-	ll := lane.NewLogLane(context.Background())
-
-	level := ll.SetLogLevel(lane.LogLevelFatal)
-	if level != lane.LogLevelTrace {
-		t.Error("Log level not initially trace")
-	}
-
-	ll2, cancel := ll.DeriveWithTimeout(time.Hour)
-
-	isDone := make(chan struct{})
-
-	start := time.Now()
-	go func() {
-		<-ll2.Done()
-		isDone <- struct{}{}
-	}()
-
-	level = ll2.SetLogLevel(lane.LogLevelDebug)
-	if level != lane.LogLevelFatal {
-		t.Error("Log level 2 was not fatal")
-	}
-
-	time.Sleep(time.Millisecond)
-	cancel()
-
-	<-isDone
-
-	delta := time.Since(start)
-	if delta.Milliseconds() > 60 {
-		t.Error("Timeout too long")
-	}
-}
-
-func TestLogLaneWithTimeoutExpire(t *testing.T) {
-	ll := lane.NewLogLane(context.Background())
-
-	level := ll.SetLogLevel(lane.LogLevelFatal)
-	if level != lane.LogLevelTrace {
-		t.Error("Log level not initially trace")
-	}
-
-	ll2, _ := ll.DeriveWithTimeout(time.Millisecond)
-
-	isDone := make(chan struct{})
-
-	start := time.Now()
-	go func() {
-		<-ll2.Done()
-		isDone <- struct{}{}
-	}()
-
-	level = ll2.SetLogLevel(lane.LogLevelDebug)
-	if level != lane.LogLevelFatal {
-		t.Error("Log level 2 was not fatal")
-	}
-
-	<-isDone
-
-	delta := time.Since(start)
-	if delta.Milliseconds() > 60 {
-		t.Error("Timeout too long")
-	}
-}
-
-func TestLogLaneWithDeadlineCancel(t *testing.T) {
-	ll := lane.NewLogLane(context.Background())
-
-	level := ll.SetLogLevel(lane.LogLevelFatal)
-	if level != lane.LogLevelTrace {
-		t.Error("Log level not initially trace")
-	}
-
-	start := time.Now()
-	ll2, cancel := ll.DeriveWithDeadline(start.Add(time.Minute))
-
-	isDone := make(chan struct{})
-
-	go func() {
-		<-ll2.Done()
-		isDone <- struct{}{}
-	}()
-
-	level = ll2.SetLogLevel(lane.LogLevelDebug)
-	if level != lane.LogLevelFatal {
-		t.Error("Log level 2 was not fatal")
-	}
-
-	time.Sleep(time.Millisecond)
-	cancel()
-
-	<-isDone
-
-	delta := time.Since(start)
-	if delta.Milliseconds() > 60 {
-		t.Error("Timeout too long")
-	}
-}
-
-func TestLogLaneWithDeadlineExpire(t *testing.T) {
-	ll := lane.NewLogLane(context.Background())
-
-	level := ll.SetLogLevel(lane.LogLevelFatal)
-	if level != lane.LogLevelTrace {
-		t.Error("Log level not initially trace")
-	}
-
-	start := time.Now()
-	ll2, _ := ll.DeriveWithDeadline(start.Add(time.Millisecond * 10))
-
-	isDone := make(chan struct{})
-
-	go func() {
-		<-ll2.Done()
-		isDone <- struct{}{}
-	}()
-
-	level = ll2.SetLogLevel(lane.LogLevelDebug)
-	if level != lane.LogLevelFatal {
-		t.Error("Log level 2 was not fatal")
-	}
-
-	<-isDone
-
-	delta := time.Since(start)
-	if delta.Milliseconds() > 60 {
-		t.Error("Timeout too long")
-	}
-}
-
-func verifyLaneEvents(t *testing.T, ll lane.Lane, expected string, buf bytes.Buffer) {
+func verifyLaneEvents(t *testing.T, ll lane.Lane, expected string, output string) {
 	v := ll.Value(lane.LogLaneIdKey)
 	if v == nil {
 		t.Fatal("missing lane id in context")
@@ -957,12 +753,12 @@ func verifyLaneEvents(t *testing.T, ll lane.Lane, expected string, buf bytes.Buf
 	expected = strings.ReplaceAll(expected, "GUID", guid)
 
 	if expected == "" {
-		if buf.Len() != 0 {
+		if output != "" {
 			t.Fatal("did not get expected empty log")
 		}
 	} else {
 		expectedLines := strings.Split(expected, "\n")
-		actualLines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+		actualLines := strings.Split(strings.TrimSpace(output), "\n")
 
 		if len(expectedLines) != len(actualLines) {
 			t.Fatal("did not get expected number of log lines")
@@ -970,84 +766,72 @@ func verifyLaneEvents(t *testing.T, ll lane.Lane, expected string, buf bytes.Buf
 
 		for i, actualLine := range actualLines {
 			expectedLine := expectedLines[i]
-			if len(expectedLine) < 21 {
-				t.Errorf("expected log line is missing the timestamp: %s", expectedLine)
-			}
-			datePart := actualLine[:20]
-			textPart := actualLine[20:]
-			if textPart != expectedLine {
-				if !strings.HasSuffix(expectedLine, "{ANY}") || !strings.HasPrefix(textPart, expectedLine[:len(expectedLine)-5]) {
-					t.Errorf("log events don't match:\n '%s' vs expected\n '%s'", textPart, expectedLine)
+			if actualLine != expectedLine {
+				if !strings.HasSuffix(expectedLine, "{ANY}") || !strings.HasPrefix(actualLine, expectedLine[:len(expectedLine)-5]) {
+					t.Errorf("log events don't match:\n '%s' vs expected\n '%s'", actualLine, expectedLine)
 				}
-			}
-			_, err := time.Parse("2006/01/02 15:04:05", strings.TrimSpace(datePart))
-			if err != nil {
-				t.Errorf("can't parse log timestamp %s", datePart)
 			}
 		}
 	}
 }
 
-func TestLogLaneReplaceContext(t *testing.T) {
-	c1 := context.WithValue(context.Background(), kTestBase, kTestBase)
-	ll := lane.NewLogLane(c1)
-
-	c2 := context.WithValue(context.Background(), kTestBase, kTestReplaced)
-	ll2 := ll.DeriveReplaceContext(c2)
-
-	if ll2.Value(kTestBase) != kTestReplaced {
-		t.Error("Base not replaced")
-	}
-
-	ll3 := ll2.Derive()
-	if ll3.Value(kTestBase) != kTestReplaced {
-		t.Error("Derived incorrect")
-	}
-}
-
-func TestLogLaneEnableStack(t *testing.T) {
-	ll := lane.NewLogLane(context.Background())
+func TestOslEnableStack(t *testing.T) {
+	_, osl := testMakeFirstOslEx(t, testNoTees)
 
 	for level := lane.LogLevelTrace; level <= lane.LogLevelFatal; level++ {
-		v := ll.EnableStackTrace(level, true)
+		v := osl.EnableStackTrace(level, true)
 		if v {
 			t.Error("expected false")
 		}
 
-		v = ll.EnableStackTrace(level, true)
+		v = osl.EnableStackTrace(level, true)
 		if !v {
 			t.Error("expected true")
 		}
 	}
 
 	for level := lane.LogLevelTrace; level <= lane.LogLevelFatal; level++ {
-		v := ll.EnableStackTrace(level, false)
+		v := osl.EnableStackTrace(level, false)
 		if !v {
 			t.Error("expected false")
 		}
 
-		v = ll.EnableStackTrace(level, false)
+		v = osl.EnableStackTrace(level, false)
 		if v {
 			t.Error("expected false")
 		}
 	}
 }
 
-func TestLogLaneDerivation(t *testing.T) {
-	pll := lane.NewLogLane(context.Background())
-	ll := pll.Derive()
+func TestOslEnableStack2(t *testing.T) {
+	tc, osl := testMakeFirstOslEx(t, testNoTees)
 
-	var buf1 bytes.Buffer
-	log.SetOutput(&buf1)
-	defer func() { log.SetOutput(os.Stderr) }()
-	ll.Logger().Println("this is a test")
+	v := osl.EnableStackTrace(lane.LogLevelError, true)
+	if v {
+		t.Error("expected false")
+	}
 
-	var buf2 bytes.Buffer
-	log.SetOutput(&buf2)
-	pll.Logger().Println("this is the parent")
+	osl.Error("test", "of", "error")
+	osl.Errorf("testing %d", 1213)
 
-	verifyLaneEvents(t, ll, "INFO {GUID} this is a test", buf1)
-	verifyLaneEvents(t, pll, "INFO {GUID} this is the parent", buf2)
+	tc.waitForBulk(14)
+
+	expected := `ERROR {GUID} test of error
+STACK {GUID} {ANY}
+STACK {GUID} {ANY}
+STACK {GUID} {ANY}
+STACK {GUID} {ANY}
+STACK {GUID} {ANY}
+STACK {GUID} {ANY}
+ERROR {GUID} testing 1213
+STACK {GUID} {ANY}
+STACK {GUID} {ANY}
+STACK {GUID} {ANY}
+STACK {GUID} {ANY}
+STACK {GUID} {ANY}
+STACK {GUID} {ANY}`
+
+	verifyLaneEvents(t, osl, expected, tc.EventsToString())
 }
 
 func setTestPanicHandler(l lane.Lane) *sync.WaitGroup {
