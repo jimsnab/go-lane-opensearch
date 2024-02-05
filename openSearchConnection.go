@@ -291,8 +291,8 @@ func (osc *openSearchConnection) flush(client apiClient, final bool) {
 					backoffDuration = osc.cfg.BackoffInterval
 					if osc.emergencyFn != nil {
 						osc.emergencyFn(logBuffer)
-						err = nil
 					}
+					err = nil
 				}
 			}
 
