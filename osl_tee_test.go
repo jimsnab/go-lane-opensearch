@@ -8,10 +8,23 @@ import (
 	"github.com/jimsnab/go-lane"
 )
 
-func TestTeeTestDerive4(t *testing.T) {
+func TestTeeTestDerive(t *testing.T) {
+	tc := &testClient{}
+	tc.install(t)
+	cfg := OslConfig{
+		OpenSearchUrl:  "localhost",
+		OpenSearchPort: 1000,
+	}
+	osl, err := NewOpenSearchLane(context.Background(), &cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tlv := lane.NewTestingLane(context.Background())
 
-	osl := NewOpenSearchLane(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	osl.AddTee(tlv)
 
 	osl.Trace("trace", 1)
@@ -41,26 +54,26 @@ func TestTeeTestDerive4(t *testing.T) {
 	tl6 := tl5.DeriveReplaceContext(context.Background())
 	tl6.Trace("trace", 2)
 
-	events := []*LaneEvent{}
-	events = append(events, &LaneEvent{Level: "TRACE", Message: "trace 1"})
-	events = append(events, &LaneEvent{Level: "TRACE", Message: "tracef 1"})
+	events := []*lane.LaneEvent{}
+	events = append(events, &lane.LaneEvent{Level: "TRACE", Message: "trace 1"})
+	events = append(events, &lane.LaneEvent{Level: "TRACE", Message: "tracef 1"})
 
-	events = append(events, &LaneEvent{Level: "DEBUG", Message: "debug 1"})
-	events = append(events, &LaneEvent{Level: "DEBUG", Message: "debugf 1"})
+	events = append(events, &lane.LaneEvent{Level: "DEBUG", Message: "debug 1"})
+	events = append(events, &lane.LaneEvent{Level: "DEBUG", Message: "debugf 1"})
 
-	events = append(events, &LaneEvent{Level: "INFO", Message: "info 1"})
-	events = append(events, &LaneEvent{Level: "INFO", Message: "infof 1"})
+	events = append(events, &lane.LaneEvent{Level: "INFO", Message: "info 1"})
+	events = append(events, &lane.LaneEvent{Level: "INFO", Message: "infof 1"})
 
-	events = append(events, &LaneEvent{Level: "WARN", Message: "warn 1"})
-	events = append(events, &LaneEvent{Level: "WARN", Message: "warnf 1"})
+	events = append(events, &lane.LaneEvent{Level: "WARN", Message: "warn 1"})
+	events = append(events, &lane.LaneEvent{Level: "WARN", Message: "warnf 1"})
 
-	events = append(events, &LaneEvent{Level: "ERROR", Message: "error 1"})
-	events = append(events, &LaneEvent{Level: "ERROR", Message: "errorf 1"})
+	events = append(events, &lane.LaneEvent{Level: "ERROR", Message: "error 1"})
+	events = append(events, &lane.LaneEvent{Level: "ERROR", Message: "errorf 1"})
 
-	events = append(events, &LaneEvent{Level: "FATAL", Message: "fatal 1"})
-	events = append(events, &LaneEvent{Level: "FATAL", Message: "fatalf 1"})
+	events = append(events, &lane.LaneEvent{Level: "FATAL", Message: "fatal 1"})
+	events = append(events, &lane.LaneEvent{Level: "FATAL", Message: "fatalf 1"})
 
-	events = append(events, &LaneEvent{Level: "TRACE", Message: "trace 2"})
+	events = append(events, &lane.LaneEvent{Level: "TRACE", Message: "trace 2"})
 
 	if !tlv.VerifyEvents(events) {
 		t.Errorf("Test events don't match")
