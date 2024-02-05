@@ -356,7 +356,6 @@ func (osc *openSearchConnection) generateBulkJson(logBuffer []*OslMessage) (json
 	var logDataLine []byte
 
 	for _, logData := range logBuffer {
-		// BUGBUG this is suspect. Why is logging a message creating an index on every log message?
 		createAction := map[string]any{"create": map[string]any{"_index": osc.cfg.OpenSearchIndex}}
 		createLine, err = json.Marshal(createAction)
 		if err != nil {
