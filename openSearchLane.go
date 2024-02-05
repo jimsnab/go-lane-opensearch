@@ -106,13 +106,6 @@ func createOpenSearchLane(config *OslConfig, parentLane lane.Lane) (newLane lane
 	osl := openSearchLane{}
 	posl, _ := parentLane.(*openSearchLane)
 
-	// if config is nil, use a default
-	if config == nil {
-		config = &OslConfig{
-			offline: true,
-		}
-	}
-
 	if posl == nil {
 		// first instance - instantiate the connection to opensearch
 		osl.openSearchConnection, err = newOpenSearchConnection(config)

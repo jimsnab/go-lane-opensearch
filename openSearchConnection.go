@@ -302,14 +302,12 @@ func (osc *openSearchConnection) flush(client apiClient, final bool) {
 				osc.logBuffer = append(logBuffer, osc.logBuffer...)
 			} else {
 				// dropped the messages
-				osc.messagesQueued -= len(logBuffer)
 				osc.messagesSentFailed += len(logBuffer)
 			}
 			osc.mu.Unlock()
 		} else {
 			osc.mu.Lock()
 			osc.messagesSent += len(logBuffer)
-			osc.messagesQueued -= len(logBuffer)
 			osc.mu.Unlock()
 			backoffDuration = 0
 		}

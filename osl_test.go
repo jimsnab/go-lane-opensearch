@@ -29,6 +29,7 @@ const (
 	testMax10
 	testOffline
 	testSlow
+	testBulkError
 )
 
 func testMakeFirstOsl(t *testing.T) (tc *testClient, osl OpenSearchLane) {
@@ -47,6 +48,13 @@ func testMakeFirstOslEx(t *testing.T, flags testInitFlag) (tc *testClient, osl O
 		cfg.BackoffInterval = time.Millisecond
 		cfg.BackoffLimit = time.Millisecond * 10
 		pcfg = &cfg
+	}
+
+	if (flags & testBulkError) != 0 {
+		tc.failure = os.ErrPermission
+		cfg.LogThreshold = 10
+		cfg.BackoffInterval = time.Millisecond
+		cfg.BackoffLimit = time.Millisecond * 10
 	}
 
 	osl, err := NewOpenSearchLane(context.Background(), pcfg)
@@ -1091,7 +1099,8 @@ func TestLogTilFull(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	osl.SetEmergencyHandler(func(logBuffer []*OslMessage) { wg.Done() })
+	fails := 0
+	osl.SetEmergencyHandler(func(logBuffer []*OslMessage) { fails = len(logBuffer); wg.Done() })
 
 	for i := 0; i < 11; i++ {
 		osl.Info(i)
@@ -1106,7 +1115,102 @@ func TestLogTilFull(t *testing.T) {
 	if stats.MessagesSent != 0 {
 		t.Error("wrong sent count")
 	}
-	if stats.MessagesSentFailed != 1 {
+	if stats.MessagesSentFailed != fails {
+		t.Error("wrong failed count")
+	}
+}
+
+func TestLogBulkError(t *testing.T) {
+	_, osl := testMakeFirstOslEx(t, testBulkError)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	fails := 0
+	failDetail := false
+	osl.SetEmergencyHandler(func(logBuffer []*OslMessage) {
+		if len(logBuffer) == 1 && strings.HasSuffix(logBuffer[0].LogMessage, "permission denied") {
+			failDetail = true
+		} else {
+			fails = len(logBuffer)
+			wg.Done()
+		}
+	})
+
+	for i := 0; i < 11; i++ {
+		osl.Info(i)
+	}
+
+	wg.Wait()
+
+	if !failDetail {
+		t.Error("did not see emergency logging of upload error")
+	}
+
+	stats := osl.Stats()
+	if stats.MessagesQueued != 11 {
+		t.Error("wrong queue count")
+	}
+	if stats.MessagesSent != 0 {
+		t.Error("wrong sent count")
+	}
+	if stats.MessagesSentFailed != fails {
+		t.Error("wrong failed count")
+	}
+}
+
+func TestLogBulkErrorThenSuccess(t *testing.T) {
+	tc, osl := testMakeFirstOslEx(t, testBulkError)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	fails := 0
+	failDetail := false
+	osl.SetEmergencyHandler(func(logBuffer []*OslMessage) {
+		if len(logBuffer) == 1 && strings.HasSuffix(logBuffer[0].LogMessage, "permission denied") {
+			failDetail = true
+		} else {
+			fails = len(logBuffer)
+			wg.Done()
+		}
+	})
+
+	for i := 0; i < 11; i++ {
+		osl.Info(i)
+	}
+
+	wg.Wait()
+
+	if !failDetail {
+		t.Error("did not see emergency logging of upload error")
+	}
+
+	stats := osl.Stats()
+	if stats.MessagesQueued != 11 {
+		t.Error("wrong queue count")
+	}
+	if stats.MessagesSent != 0 {
+		t.Error("wrong sent count")
+	}
+	if stats.MessagesSentFailed != fails {
+		t.Error("wrong failed count")
+	}
+
+	tc.failure = nil
+
+	for i := 0; i < 11; i++ {
+		osl.Warn(i)
+	}
+
+	tc.waitForBulk(11)
+
+	stats = osl.Stats()
+	if stats.MessagesQueued != 22 {
+		t.Error("wrong queue count")
+	}
+	if stats.MessagesSent != 11 {
+		t.Error("wrong sent count")
+	}
+	if stats.MessagesSentFailed != fails {
 		t.Error("wrong failed count")
 	}
 }
