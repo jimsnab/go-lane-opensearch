@@ -1034,3 +1034,29 @@ func TestLogNoDelay(t *testing.T) {
 		t.Fatalf("too fast: %dms", delta.Milliseconds())
 	}
 }
+
+func TestLaneMetadata(t *testing.T) {
+	_, osl := testMakeFirstOsl(t)
+	tl := lane.NewTestingLane(context.Background())
+	osl.AddTee(tl)
+
+	if tl.GetMetadata("test") != "" {
+		t.Fatal("metadata should not be present yet")
+	}
+
+	osl.SetMetadata("test", "pass")
+	if tl.GetMetadata("test") != "pass" {
+		t.Fatal("metadata should be reflected in the tee")
+	}
+
+	// generic interface works also
+	osl.SetMetadata("test2", "also pass")
+	if tl.GetMetadata("test2") != "also pass" {
+		t.Fatal("metadata 2 should be reflected in the tee")
+	}
+
+	p := osl.(*openSearchLane)
+	if p.LogLane.GetMetadata("test") != "pass" || p.GetMetadata("test2") != "also pass" {
+		t.Fatal("metadata should exist in the osl")
+	}
+}

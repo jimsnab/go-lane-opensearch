@@ -16,6 +16,12 @@ github.com/jimsnab/go-lane v1.15.7 h1:xD7tQPj0MluCum9fGTgMlEKb0RPgEku15tNGbDiLIl
 github.com/jimsnab/go-lane v1.15.7/go.mod h1:3eDBQ5/I5ERg7fV47vf2HvUeHQifM9x5xmaFdXIbZ64=
 github.com/jimsnab/go-lane v1.16.0 h1:7xaplK67hXHXSapzQjfQiGiW1EGGDdWDKA/vhFs8AnU=
 github.com/jimsnab/go-lane v1.16.0/go.mod h1:3eDBQ5/I5ERg7fV47vf2HvUeHQifM9x5xmaFdXIbZ64=
+github.com/jimsnab/go-lane v1.17.0 h1:/9zwIuT6E6GRCCfOhHTu0eOj/m4hO8XPLHt/Dg4pFp0=
+github.com/jimsnab/go-lane v1.17.0/go.mod h1:3eDBQ5/I5ERg7fV47vf2HvUeHQifM9x5xmaFdXIbZ64=
+github.com/jimsnab/go-lane v1.18.0 h1:pyUYVuN1X+GsZOLOLvGQbevcQxAcrCbHtgTiekPNGSQ=
+github.com/jimsnab/go-lane v1.18.0/go.mod h1:3eDBQ5/I5ERg7fV47vf2HvUeHQifM9x5xmaFdXIbZ64=
+github.com/jimsnab/go-lane v1.18.1 h1:EQLebHXtSAhZ741cOhw1O+23FN4mjr/8l8xp3mOTus8=
+github.com/jimsnab/go-lane v1.18.1/go.mod h1:3eDBQ5/I5ERg7fV47vf2HvUeHQifM9x5xmaFdXIbZ64=
 github.com/opensearch-project/opensearch-go/v3 v3.0.0 h1:KBaZC2qjTMX651JKmTPopW0D1VsZvqydlNBMQWaeI7w=
 github.com/opensearch-project/opensearch-go/v3 v3.0.0/go.mod h1:Au5KA380eWrGAYOYh19Ql7wIjysm5Q+V4BSYUHpXuj0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

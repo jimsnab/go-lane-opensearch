@@ -69,13 +69,11 @@ type (
 		lane.LogLane
 		mu                   sync.Mutex
 		openSearchConnection *openSearchConnection
-		metadata             map[string]string
 	}
 
 	// Interface defining methods for a lane in OpenSearch logging.
 	OpenSearchLane interface {
 		lane.Lane
-		lane.LaneMetadata
 		Reconnect(config *OslConfig) (err error)
 		SetEmergencyHandler(emergencyFn OslEmergencyFn)
 		Stats() (stats OslStats)
@@ -127,17 +125,6 @@ func createOpenSearchLane(config *OslConfig, parentLane lane.Lane) (newLane lane
 	return
 }
 
-func (osl *openSearchLane) SetMetadata(key string, val string) {
-	osl.mu.Lock()
-	defer osl.mu.Unlock()
-
-	if osl.metadata == nil {
-		osl.metadata = make(map[string]string)
-	}
-
-	osl.metadata[key] = val
-}
-
 func (osl *openSearchLane) Close() {
 	osl.openSearchConnection.detach()
 }
@@ -152,12 +139,8 @@ func (osl *openSearchLane) Write(p []byte) (n int, err error) {
 
 	parentLaneId, _ := osl.LogLane.Value(lane.ParentLaneIdKey).(string)
 
-	mapCopy := make(map[string]string, len(osl.metadata)+1)
-	if len(osl.metadata) > 0 {
-		for k, v := range osl.metadata {
-			mapCopy[k] = v
-		}
-	}
+	lm := osl.LogLane.(lane.LaneMetadata)
+	mapCopy := lm.MetadataMap()
 	mapCopy["timestamp"] = time.Now().UTC().Format(time.RFC3339)
 
 	logData := OslMessage{
