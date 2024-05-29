@@ -2,8 +2,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/jimsnab/go-lane v1.22.0 h1:c8PYDalR7Sy87xaEIkWhChtvZhRKG9Vj8nhgyVi8134=
-github.com/jimsnab/go-lane v1.22.0/go.mod h1:3eDBQ5/I5ERg7fV47vf2HvUeHQifM9x5xmaFdXIbZ64=
+github.com/jimsnab/go-lane v1.22.1 h1:nAP6VnMvZlyRMR2YS8MciITCHx8+SbOjP6xBvtF6chM=
+github.com/jimsnab/go-lane v1.22.1/go.mod h1:PoIcM/onjPN/aPu7e+qU9iKTtK/tS6lnfPJo0H7jl+k=
 github.com/opensearch-project/opensearch-go/v3 v3.1.0 h1:7EghS/+dCYD6PrsXjfIf3fvMOObkPtrDJVbovlNl3sY=
 github.com/opensearch-project/opensearch-go/v3 v3.1.0/go.mod h1:9UWs3sbIESBpsGlfhTmj5PXm3tXvgxRan4D+W9d700Q=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
