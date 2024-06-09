@@ -2,12 +2,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/jimsnab/go-lane v1.23.0 h1:ASHM3xtHXTsVlOgpviMKyFmW05pW5uPO6LK74dlnwb0=
-github.com/jimsnab/go-lane v1.23.0/go.mod h1:PoIcM/onjPN/aPu7e+qU9iKTtK/tS6lnfPJo0H7jl+k=
-github.com/jimsnab/go-lane v1.23.1 h1:uG2DnTZCnWjL4VAez2PBjB1EYS3I/h0AZUOst2joY+E=
-github.com/jimsnab/go-lane v1.23.1/go.mod h1:PoIcM/onjPN/aPu7e+qU9iKTtK/tS6lnfPJo0H7jl+k=
-github.com/jimsnab/go-lane v1.23.2 h1:x55NmlrflcjfEZ+QXCCtj0QM/9k197wewqqlo4r9Df8=
-github.com/jimsnab/go-lane v1.23.2/go.mod h1:PoIcM/onjPN/aPu7e+qU9iKTtK/tS6lnfPJo0H7jl+k=
+github.com/jimsnab/go-lane v1.24.0 h1:j4162hdvRcL7+ZCQs1iHovtDhLN4S3i2RaoyCSH0Y3o=
+github.com/jimsnab/go-lane v1.24.0/go.mod h1:PoIcM/onjPN/aPu7e+qU9iKTtK/tS6lnfPJo0H7jl+k=
 github.com/opensearch-project/opensearch-go/v3 v3.1.0 h1:7EghS/+dCYD6PrsXjfIf3fvMOObkPtrDJVbovlNl3sY=
 github.com/opensearch-project/opensearch-go/v3 v3.1.0/go.mod h1:9UWs3sbIESBpsGlfhTmj5PXm3tXvgxRan4D+W9d700Q=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
