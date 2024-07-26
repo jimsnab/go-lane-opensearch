@@ -278,7 +278,6 @@ func (osc *openSearchConnection) flush(client apiClient, final bool) {
 		}()
 
 		err := osc.bulkInsert(client, logBuffer)
-
 		// upon a failure, try again after a backoff; and give up if it takes too long
 		if err != nil {
 
@@ -286,14 +285,15 @@ func (osc *openSearchConnection) flush(client apiClient, final bool) {
 				backoffDuration = osc.cfg.BackoffInterval
 			} else {
 				backoffDuration *= 2
-				if backoffDuration > osc.cfg.BackoffLimit {
-					// waited too long - losing this set of messages - send to emergency log
-					backoffDuration = osc.cfg.BackoffInterval
-					if osc.emergencyFn != nil {
-						osc.emergencyFn(logBuffer)
-					}
-					err = nil
+			}
+
+			if (backoffDuration > osc.cfg.BackoffLimit) || final {
+				// waited too long or is final - losing this set of messages - send to emergency log
+				backoffDuration = osc.cfg.BackoffInterval
+				if osc.emergencyFn != nil {
+					osc.emergencyFn(logBuffer)
 				}
+				err = nil
 			}
 
 			osc.mu.Lock()
@@ -308,10 +308,11 @@ func (osc *openSearchConnection) flush(client apiClient, final bool) {
 		} else {
 			osc.mu.Lock()
 			osc.messagesSent += len(logBuffer)
-			osc.mu.Unlock()
 			backoffDuration = 0
+			osc.mu.Unlock()
 		}
 	}()
+	wg.Wait()
 }
 
 func (osc *openSearchConnection) attach() {
