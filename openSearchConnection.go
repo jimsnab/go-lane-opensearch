@@ -308,8 +308,8 @@ func (osc *openSearchConnection) flush(client apiClient, final bool) {
 		} else {
 			osc.mu.Lock()
 			osc.messagesSent += len(logBuffer)
-			backoffDuration = 0
 			osc.mu.Unlock()
+			backoffDuration = 0
 		}
 	}()
 	wg.Wait()
