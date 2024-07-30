@@ -63,8 +63,6 @@ func testMakeFirstOslEx(t *testing.T, flags testInitFlag) (tc *testClient, osl O
 	if (flags & testSlow) != 0 {
 		cfg.LogThreshold = 1
 		tc.delay = time.Millisecond * 250
-		p := osl.(*openSearchLane)
-		p.openSearchConnection.pumpInterval = time.Millisecond * 25
 	}
 
 	if (flags & testNoTees) == 0 {
@@ -1059,4 +1057,28 @@ func TestLaneMetadata(t *testing.T) {
 	if p.LogLane.GetMetadata("test") != "pass" || p.GetMetadata("test2") != "also pass" {
 		t.Fatal("metadata should exist in the osl")
 	}
+}
+
+func TestHeavyLogging(t *testing.T) {
+	_, osl := testMakeFirstOslEx(t, testNoTees|testSlow)
+
+	var wgs []*sync.WaitGroup
+	for task := range 5 {
+		var wg sync.WaitGroup
+		wg.Add(1)
+		wgs = append(wgs, &wg)
+		go func() {
+			defer wg.Done()
+			for msg := range 100 {
+				osl.Infof("task %d message %d", task, msg)
+				time.Sleep(time.Microsecond)
+			}
+		}()
+	}
+
+	for _, wg := range wgs {
+		wg.Wait()
+	}
+
+	// no deadlock
 }

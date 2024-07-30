@@ -226,44 +226,60 @@ func (osc *openSearchConnection) flush(client apiClient, final bool) {
 		return
 	}
 
-	osc.mu.Lock()
-	// if previously flushing, and not final, let that finish
-	if osc.flushing != nil {
+	// become the flush owner
+	for {
+		osc.mu.Lock()
+		if osc.flushing == nil {
+			osc.flushInner(client, final) // takes ownership of releasing osc.mu
+			return
+		}
 		pwg := osc.flushing
 		osc.mu.Unlock()
+
 		if !final {
+			// another flush is active; not final; continue on
 			return
 		}
 
+		// wait for the flush owner to complete and then try being owner again
 		(*pwg).Wait()
-
-		osc.mu.Lock()
-		osc.flushing = nil
 	}
+}
 
-	// take ownership of the log buffer (unless it is empty)
+func (osc *openSearchConnection) flushInner(client apiClient, final bool) {
+	// currently holding lock on osc.mu
+	// must assign osc.flushing before releasing the lock (unless nothing to flush)
+
+	// take ownership of the log buffer (unless it is empty) and
+	// provide a new one for the next log messages to come while
+	// we're flushing what we have now
 	if len(osc.logBuffer) == 0 {
-		osc.mu.Unlock()
 		osc.backoffDuration = 0
+		osc.mu.Unlock()
 		return
 	}
 
 	logBuffer := osc.logBuffer
 	osc.logBuffer = make([]*OslMessage, 0, len(logBuffer))
-	osc.mu.Unlock()
+	ef := osc.emergencyFn
 
 	if client == nil {
-		// final - not connected - save to emergency log
-		if osc.emergencyFn != nil {
-			osc.emergencyFn(osc.logBuffer)
+		// not connected; final must be true because of check in flush();
+		// save to emergency log
+		osc.mu.Unlock()
+		if ef != nil {
+			ef(osc.logBuffer)
 		}
 		return
 	}
 
-	// send to opensearch
+	// become flushing owner and perform flush asynchronously
 	var wg sync.WaitGroup
 	osc.flushing = &wg
 	wg.Add(1)
+	osc.mu.Unlock()
+
+	// send to opensearch
 	go func() {
 		osc.mu.Lock()
 		backoffDuration := osc.backoffDuration
@@ -290,8 +306,8 @@ func (osc *openSearchConnection) flush(client apiClient, final bool) {
 			if (backoffDuration > osc.cfg.BackoffLimit) || final {
 				// waited too long or is final - losing this set of messages - send to emergency log
 				backoffDuration = osc.cfg.BackoffInterval
-				if osc.emergencyFn != nil {
-					osc.emergencyFn(logBuffer)
+				if ef != nil {
+					ef(logBuffer)
 				}
 				err = nil
 			}
@@ -312,7 +328,6 @@ func (osc *openSearchConnection) flush(client apiClient, final bool) {
 			backoffDuration = 0
 		}
 	}()
-	wg.Wait()
 }
 
 func (osc *openSearchConnection) attach() {
@@ -377,7 +392,11 @@ func (osc *openSearchConnection) generateBulkJson(logBuffer []*OslMessage) (json
 }
 
 func (osc *openSearchConnection) emergencyLog(formatStr string, args ...any) {
-	if osc.emergencyFn != nil {
+	osc.mu.Lock()
+	ef := osc.emergencyFn
+	osc.mu.Unlock()
+
+	if ef != nil {
 		msg := fmt.Sprintf(formatStr, args...)
 
 		oslm := &OslMessage{
@@ -390,7 +409,7 @@ func (osc *openSearchConnection) emergencyLog(formatStr string, args ...any) {
 
 		logBuffer := []*OslMessage{oslm}
 
-		osc.emergencyFn(logBuffer)
+		ef(logBuffer)
 	}
 }
 
