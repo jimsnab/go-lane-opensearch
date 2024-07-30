@@ -268,7 +268,7 @@ func (osc *openSearchConnection) flushInner(client apiClient, final bool) {
 		// save to emergency log
 		osc.mu.Unlock()
 		if ef != nil {
-			ef(osc.logBuffer)
+			ef(logBuffer)
 		}
 		return
 	}
@@ -328,6 +328,11 @@ func (osc *openSearchConnection) flushInner(client apiClient, final bool) {
 			backoffDuration = 0
 		}
 	}()
+
+	// if final wait until goroutine is done
+	if final {
+		wg.Wait()
+	}
 }
 
 func (osc *openSearchConnection) attach() {

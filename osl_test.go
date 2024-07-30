@@ -43,7 +43,7 @@ func testMakeFirstOslEx(t *testing.T, flags testInitFlag) (tc *testClient, osl O
 	if (flags & testMax10) != 0 {
 		cfg.LogThreshold = 10
 		cfg.MaxBufferSize = 10
-		cfg.BackoffInterval = time.Millisecond
+		cfg.BackoffInterval = time.Millisecond * 25
 		cfg.BackoffLimit = time.Millisecond * 10
 		pcfg = &cfg
 	}
@@ -388,7 +388,7 @@ WARN	testing 1011
 ERROR	test of error
 ERROR	testing 1213`
 
-	if !tc.VerifyRecieved(expected) {
+	if !tc.VerifyReceived(expected) {
 		t.Errorf("Test events don't match")
 	}
 }
@@ -422,7 +422,7 @@ WARN	testing 1011
 ERROR	test of error
 ERROR	testing 1213`
 
-	if !tc.VerifyRecieved(expected) {
+	if !tc.VerifyReceived(expected) {
 		t.Errorf("Test events don't match")
 	}
 }
@@ -454,7 +454,7 @@ WARN	testing 1011
 ERROR	test of error
 ERROR	testing 1213`
 
-	if !tc.VerifyRecieved(expected) {
+	if !tc.VerifyReceived(expected) {
 		t.Errorf("Test events don't match")
 	}
 }
@@ -484,7 +484,7 @@ WARN	testing 1011
 ERROR	test of error
 ERROR	testing 1213`
 
-	if !tc.VerifyRecieved(expected) {
+	if !tc.VerifyReceived(expected) {
 		t.Errorf("Test events don't match")
 	}
 }
@@ -512,7 +512,7 @@ func TestOslVerifyTextWarn(t *testing.T) {
 	expected := `ERROR	test of error
 ERROR	testing 1213`
 
-	if !tc.VerifyRecieved(expected) {
+	if !tc.VerifyReceived(expected) {
 		t.Errorf("Test events don't match")
 	}
 }
@@ -542,7 +542,7 @@ func TestOslVerifyTextError(t *testing.T) {
 
 	expected := "INFO\ttest of info"
 
-	if !tc.VerifyRecieved(expected) {
+	if !tc.VerifyReceived(expected) {
 		t.Errorf("Test events don't match")
 	}
 }
@@ -555,7 +555,7 @@ func TestOslVerifyCancel(t *testing.T) {
 
 	expected := "TRACE\ttest of trace"
 
-	if !tc.VerifyRecieved(expected) {
+	if !tc.VerifyReceived(expected) {
 		t.Errorf("Test events don't match")
 	}
 
@@ -602,7 +602,7 @@ func TestOslVerifyTimeout(t *testing.T) {
 
 	expected := "TRACE\ttest of trace"
 
-	if !tc.VerifyRecieved(expected) {
+	if !tc.VerifyReceived(expected) {
 		t.Errorf("Test events don't match")
 	}
 
@@ -640,7 +640,7 @@ func TestOslVerifyDeadline(t *testing.T) {
 
 	expected := "TRACE\ttest of trace"
 
-	if !tc.VerifyRecieved(expected) {
+	if !tc.VerifyReceived(expected) {
 		t.Errorf("Test events don't match")
 	}
 
@@ -674,7 +674,7 @@ func TestOslWrappedLogger(t *testing.T) {
 
 	osl.Logger().Println("this is a test")
 
-	if !tc.VerifyRecieved("INFO\tthis is a test") {
+	if !tc.VerifyReceived("INFO\tthis is a test") {
 		t.Errorf("Test events don't match")
 	}
 }
@@ -1081,4 +1081,56 @@ func TestHeavyLogging(t *testing.T) {
 	}
 
 	// no deadlock
+}
+
+func TestFinalLog(t *testing.T) {
+	tc, osl := testMakeFirstOsl(t)
+	deriveL := osl.Derive()
+
+	deriveL.Info("derive test")
+	deriveL.Close()
+
+	osl.Info("osl test")
+
+	// is final
+	osl.Close()
+
+	expected := `INFO	derive test
+INFO	osl test`
+
+	if !tc.VerifyReceived(expected) {
+		t.Errorf("Test events don't match")
+	}
+
+	stats := osl.Stats()
+
+	if stats.MessagesSent != 2 {
+		t.Fatal("expected messages were not sent on final")
+	}
+
+}
+
+func TestFinalLogEmergencyWrite(t *testing.T) {
+	_, osl := testMakeFirstOslEx(t, testBulkError)
+
+	var expectedWrite []string
+	osl.SetEmergencyHandler(func(messages []*OslMessage) {
+		for _, message := range messages {
+			expectedWrite = append(expectedWrite, message.LogMessage)
+		}
+	})
+
+	deriveL := osl.Derive()
+
+	deriveL.Info("derive test")
+	deriveL.Close()
+	osl.Info("osl test")
+
+	// is final
+	osl.Close()
+
+	if len(expectedWrite) != 3 {
+		t.Fatal("expected messages were not send on emergencyHandler")
+	}
+
 }

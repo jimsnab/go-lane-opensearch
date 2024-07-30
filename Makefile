@@ -19,3 +19,10 @@ vuln:
 	govulncheck ./...
 .PHONY: verify
 verify: lint sec vuln
+test:
+	go test -v -covermode=atomic -coverpkg ./... ./... -coverprofile=coverage.coverprofile
+	@grep -v -E -f .covignore coverage.coverprofile > coverage.filtered.coverprofile
+	@mv coverage.filtered.coverprofile coverage.coverprofile
+	go tool cover -html=coverage.coverprofile -o cover.html
+	@echo total:
+	@go tool cover -func coverage.coverprofile | grep -e 'total:' | grep -o '[0-9.]*' | cat

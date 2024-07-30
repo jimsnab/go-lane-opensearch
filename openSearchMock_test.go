@@ -99,7 +99,7 @@ func (tc *testClient) VerifyEventText(eventText string) bool {
 	return true
 }
 
-func (tc *testClient) VerifyRecieved(eventText string) bool {
+func (tc *testClient) VerifyReceived(eventText string) bool {
 	eventList := []*lane.LaneEvent{}
 
 	if eventText != "" {
