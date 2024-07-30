@@ -43,7 +43,7 @@ func testMakeFirstOslEx(t *testing.T, flags testInitFlag) (tc *testClient, osl O
 	if (flags & testMax10) != 0 {
 		cfg.LogThreshold = 10
 		cfg.MaxBufferSize = 10
-		cfg.BackoffInterval = time.Millisecond * 25
+		cfg.BackoffInterval = time.Millisecond
 		cfg.BackoffLimit = time.Millisecond * 10
 		pcfg = &cfg
 	}
