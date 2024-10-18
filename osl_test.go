@@ -78,7 +78,7 @@ func testMakeFirstOslEx(t *testing.T, flags testInitFlag) (tc *testClient, osl O
 	p.openSearchConnection.pumpInterval = time.Millisecond * 25
 
 	if (flags & testOffline) == 0 {
-		cfg.OpenSearchUrl = "localhost"
+		cfg.OpenSearchHost = "localhost"
 		cfg.OpenSearchPort = 1000
 		cfg.OpenSearchTransport = &http.Transport{}
 
@@ -338,7 +338,7 @@ func TestOslWithDeadlineExpire(t *testing.T) {
 func TestOslReplaceContext(t *testing.T) {
 	c1 := context.WithValue(context.Background(), kTestBase, kTestBase)
 	cfg := OslConfig{
-		OpenSearchUrl:  "localhost",
+		OpenSearchHost: "localhost",
 		OpenSearchPort: 1000,
 	}
 	osl, err := NewOpenSearchLane(c1, &cfg)

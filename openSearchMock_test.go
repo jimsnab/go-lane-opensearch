@@ -16,7 +16,7 @@ import (
 
 type (
 	testClient struct {
-		orgNewClient func(openSearchUrl string, openSearchPort int, openSearchUser, openSearchPass string, openSearchTransport *http.Transport) (client apiClient, err error)
+		orgNewClient func(openSearchHost string, openSearchPort int, openSearchUser, openSearchPass string, openSearchTransport *http.Transport) (client apiClient, err error)
 		delay        time.Duration
 		failure      error
 		lines        []*OslMessage
@@ -76,7 +76,7 @@ func (tc *testClient) Bulk(ctx context.Context, req opensearchapi.BulkReq) (*ope
 
 func (tc *testClient) install(t *testing.T) {
 	tc.orgNewClient = newOpenSearchClient
-	newOpenSearchClient = func(openSearchUrl string, openSearchPort int, openSearchUser, openSearchPass string, openSearchTransport *http.Transport) (client apiClient, err error) {
+	newOpenSearchClient = func(openSearchHost string, openSearchPort int, openSearchUser, openSearchPass string, openSearchTransport *http.Transport) (client apiClient, err error) {
 		client = tc
 		return
 	}

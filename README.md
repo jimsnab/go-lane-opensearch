@@ -1,136 +1,133 @@
-# go-lane
+# go-lane-opensearch
 
-A "lane" is a context that has logging associated. It is a melding of Go's `log` and its `context`.
+A "lane" is a context that includes logging functionality, combining Go's 'log' 
+package with 'context'. Learn more at [go-lane](http://github/jimsnab/go-lane).
 
-# Basic Use
+This project enables sending lane logs to OpenSearch.
 
+# Usage
+
+## Basic Use
 ```go
 import (
     "context"
     "github.com/jimsnab/go-lane"
+	osl "github.com/jimsnab/go-lane-opensearch"
 )
 
 func myFunc() {
-    l := lane.NewLogLane(context.Background())
+    l, err := osl.NewOpenSearchLane(nil, &osl.OslConfig{
+		OpenSearchHost: "localhost",
+		OpenSearchPort: 9200,
+		OpenSearchUser: "admin",
+		OpenSearchPass: "TheAdmin&1",
+		OpenSearchIndex: "logging",
+		OpenSearchAppName: "myapp",
+		OpenSearchTransport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // insecure: for example only
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close()
 
     l.Info("log something")
 }
 ```
 
-At the root, a lane needs a context, and that is typically `context.Background()`. From there, instead of
-passing a `context` instance as the first parameter, pass the lane `l`.
+## Tee
+It is common to tee the OpenSearchLane with another lane like the standard LogLane,
+so that logging goes to OpenSearch, and to stdout.
 
 ```go
-func someFunc(l lane.Lane) {
-     // use l like a context instance, or call one of its interface members
+	l2 := lane.NewLogLane(nil)
+	l.AddTee(l2)
+```
+
+## Buffering, Retry and Emergency Handler
+The OpenSearch lane will collect logging and send documents as a batch. It will retry if
+the server is unavailable.
+
+If too many retries occur, the log messages can be sent to an emergency store such as
+the local disk, so that diagnostics are not lost in an unstable environment. The client
+of the OpenSearch lane implements the emergency storage as needed.
+
+```go
+	l.SetEmergencyHandler(myEmergencyHandler)
+```
+
+```go
+func myEmergencyHandler(logBuffer []*osl.OslMessage) {
+	for _, logEntry := range logBuffer {
+		logLine := fmt.Sprintf("AppName: %s, ParentLaneId: %s, JourneyID: %s, LaneID: %s, LogMessage: %s, Metadata: %+v\n",
+			logEntry.AppName, logEntry.ParentLaneId, logEntry.JourneyID, logEntry.LaneID, logEntry.LogMessage, logEntry.Metadata)
+
+		fmt.Fprintf(os.Stderr, logLine)
+	}	
 }
 ```
 
-# Interface
+OpenSearch lane configuration allows the client to specify the size of the buffer for
+accumulating logging, and control over the amount of retries.
+
+|OslConfig Member |Description                          |
+|-----------------|-------------------------------------|
+|`LogThreshold`   | Determines the size at which the log messages buffer triggers bulk insertion. |
+|`MaxBufferSize`  | Controls the size limit of the buffer used for storing log messages. |
+|`BackoffInterval`|Specifies the duration between consecutive attempts to reconnect or resend messages in case of failures. |
+|`BackoffLimit`   | Limits the time span within which backoff attempts are made before considering a connection or message sending attempt as failed. |
+
+## Metadata
+The metadata is included with each log message:
+
+* `timestamp` is included and works well with OpenSearch indexing.
+* `appName` from the configuration is included with each document.
+* `journeyId` stored in the lane is sent, unless it is empty.
+* `laneId` provides a unique correlation ID for the lane.
+* `parentLaneId` provides the correlation ID of the parent lane, if there is one.
+* `logMessage` is the formatted log message.
+
+Additional metadata will be included when added via the standard lane interface for metadata.
+
+## Offline Mode
+
+If the OpenSearch lane is created without a configuration for OpenSearch, it will fall into
+offline mode, where it collects log messages, up to the configured buffering limit.
+
+A common pattern is to create an OpenSearch lane right away, before the credentials to
+OpenSearch have been obtained. In that way, the process of retrieving the credentials can
+be logged. Once the credentials are set in the OpenSearch lane, all of the startup logging
+will be uploaded.
+
+## Changing Connection Configuration
+
+The server configuration can be changed at any time.
 
 ```go
-Lane interface {
-	context.Context
-	LaneId() string
-	SetJourneyId(id string)
-	SetLogLevel(newLevel LaneLogLevel) (priorLevel LaneLogLevel)
-	Trace(args ...any)
-	Tracef(format string, args ...any)
-	Debug(args ...any)
-	Debugf(format string, args ...any)
-	Info(args ...any)
-	Infof(format string, args ...any)
-	Warn(args ...any)
-	Warnf(format string, args ...any)
-	Error(args ...any)
-	Errorf(format string, args ...any)
-	Fatal(args ...any)
-	Fatalf(format string, args ...any)
-	Logger() *log.Logger
-	Close()
-
-	Derive() Lane
-	DeriveWithCancel() (Lane, context.CancelFunc)
-	DeriveWithDeadline(deadline time.Time) (Lane, context.CancelFunc)
-	DeriveWithTimeout(duration time.Duration) (Lane, context.CancelFunc)
-	DeriveReplaceContext(ctx context.Context) Lane
-
-	EnableStackTrace(level LaneLogLevel, enable bool) (wasEnabled bool)
-
-	AddTee(l Lane)
-	RemoveTee(l Lane)
-
-	SetPanicHandler(handler Panic)
-}
+	err = l.Reconnect(&osl.OslConfig{
+		OpenSearchHost: "localhost",
+		OpenSearchPort: 9200,
+		OpenSearchUser: "admin",
+		OpenSearchPass: "TheAdmin&1",
+		OpenSearchIndex: "logging",
+		OpenSearchAppName: "myapp",
+		OpenSearchTransport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // insecure: for example only
+		},
+	)
+	if err != nil {
+		l.Fatal(err)
+	}
 ```
 
-For the most part, application code will use the logging functions (Trace, Debug, ...).
+To go to offline mode, call `l.Reconnect(nil)`.
 
-A correlation ID is provided via `LaneId()`, which is automatically inserted into the
-logged message.
+## Derivation
 
-When spawining go routines, pass `l` around, or use one of the Derive functions when
-a new correlation ID is needed.
+When an OpenSearch lane is established, a connection task is created to handle uploads. Derived lanes share this connection task, which is reference-counted to ensure it remains active until all lanes associated with it are closed.
 
-Optionally, an "outer ID" can be assigned with `SetJourneyId()`. This function is useful
-to correlate a transaction that involves many lanes, or to correlate with an externally
-generated ID. The journey id is inherited by derived lanes.
+## Closing
 
-For example, a front end might generate a journey ID, passing it with its REST
-request to a go server that logs its activity via lanes. By setting the journey ID to
-what the front end has generated, the lanes will be correlated with front end logging.
-
-Another lane can "tee" from a source lane. For example, it might be desired to tee a
-testing lane from a logging lane, and then a unit test can verify certain log messages
-occur during the test.
-
-# Types of Lanes
-
-- `NewLogLane` log messages go to the standard Go `log` infrastructure. Access the `log`
-  instance via `Logger()` to set flags, add a prefix, or change output I/O.
-- `NewDiskLane` like a "log lane" but writes output to a file.
-- `NewTestingLane` captures log messages into a buffer and provides helpers for unit tests:
-
-  - `VerifyEvents()`, `VerifyEventText()` - check for exact log messages
-  - `FindEvents()`, `FindEventText()` - check logged messages for specific logging events
-  - `EventsToString()` - stringify the logged messages for verification by the unit test
-
-  A testing lane also has the API `WantDescendantEvents()` to enable (or disable) capture of
-  derived testing lane activity. This is useful to verify a child task reaches an expected
-  logging point.
-
-- `NewNullLane` creates a lane that does not log but still has the context functionality.
-  Logging is similar to `log.SetOutput(io.Discard)` - fatal errors still terminate the app.
-
-- `OpenSearchLane` is a type that implements the Lane interface for logging to OpenSearch. It contains methods for writing logs, flushing log buffers, and closing the lane.
-
-Normally the production code uses a log lane, and unit tests use a testing lane; a null
-lane is handy in unit tests to disable logging out of scope of the test.
-
-The code doing the logging or using the context should not care what kind of lane it
-is given to use.
-
-# Stack Trace
-
-Stack trace logging can be enabled on a per level basis. For example, to enable stack
-trace output for `ERROR`:
-
-```go
-func example() {
-	l := NewLogLane(context.Background())
-	l.EnableStackTrace(lane.LogLevelError, true)
-	l.Error("sample")   // stack trace is logged also
-}
-```
-
-# Panic Handler
-
-Fatal messages result in a panic. The panic handler can be replaced by test code to
-verify a fatal condition is reached within a test.
-
-An ordinary unrecovered panic won't allow other go routines to continue, because,
-obviously, the process normally terminates on a panic. A test must ensure all go
-routines started by the test are stopped by its replacement panic handler.
-
-At minimum, the test's replacement panic handler must not let the panicking go
-routine continue execution (it should call `runtime.Goexit()`).
+While most lane types do not need to be closed, the OpenSearch lane does. Calling `Close()`
+ensures all of the uploading is complete prior to termination.

@@ -3,7 +3,7 @@ module github.com/jimsnab/go-lane-opensearch
 go 1.22.5
 
 require (
-	github.com/jimsnab/go-lane v1.26.0
+	github.com/jimsnab/go-lane v1.27.0
 	github.com/opensearch-project/opensearch-go/v3 v3.1.0
 )
 

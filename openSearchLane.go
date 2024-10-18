@@ -34,7 +34,7 @@ type (
 	// Configuration struct for OpenSearch connection settings.
 	OslConfig struct {
 		offline             bool
-		OpenSearchUrl       string          `json:"openSearchUrl"`
+		OpenSearchHost      string          `json:"openSearchHost"`
 		OpenSearchPort      int             `json:"openSearchPort"`
 		OpenSearchUser      string          `json:"openSearchUser"`
 		OpenSearchPass      string          `json:"openSearchPass"`
