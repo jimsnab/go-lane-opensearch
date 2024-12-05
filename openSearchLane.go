@@ -2,6 +2,7 @@ package osl
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -31,6 +32,9 @@ type (
 	// Function type for the callback invoked when log messages are about to be lost because OpenSearch cannot be reached.
 	OslEmergencyFn func(logBuffer []*OslMessage)
 
+	// Function invoked to decorate the index name (typically used for sharding)
+	OslShardNameFn func(baseName string) string
+
 	// Configuration struct for OpenSearch connection settings.
 	OslConfig struct {
 		offline             bool
@@ -44,7 +48,7 @@ type (
 		LogThreshold        int             `json:"logThreshold,omitempty"`
 		MaxBufferSize       int             `json:"maxBufferSize,omitempty"`
 		BackoffInterval     time.Duration   `json:"backoffInterval,omitempty"`
-		BackoffLimit        time.Duration   `json:"BackoffLimit,omitempty"`
+		BackoffLimit        time.Duration   `json:"backoffLimit,omitempty"`
 	}
 
 	// Struct representing a log message in OpenSearch.
@@ -75,10 +79,13 @@ type (
 	OpenSearchLane interface {
 		lane.Lane
 		Reconnect(config *OslConfig) (err error)
-		SetEmergencyHandler(emergencyFn OslEmergencyFn)
+		SetEmergencyHandler(emergencyFn OslEmergencyFn) (prior OslEmergencyFn)
+		SetIndexSharder(sharderFn OslShardNameFn) (prior OslShardNameFn)
 		Stats() (stats OslStats)
 	}
 )
+
+var ErrIndexNameRequired = errors.New("an index name is required")
 
 func NewOpenSearchLane(ctx context.Context, config *OslConfig) (l OpenSearchLane, err error) {
 
@@ -160,6 +167,10 @@ func (osl *openSearchLane) Stats() OslStats {
 	return osl.openSearchConnection.stats()
 }
 
-func (osl *openSearchLane) SetEmergencyHandler(emergencyFn OslEmergencyFn) {
-	osl.openSearchConnection.setEmergencyHandler(emergencyFn)
+func (osl *openSearchLane) SetEmergencyHandler(emergencyFn OslEmergencyFn) (prior OslEmergencyFn) {
+	return osl.openSearchConnection.setEmergencyHandler(emergencyFn)
+}
+
+func (osl *openSearchLane) SetIndexSharder(sharderFn OslShardNameFn) (prior OslShardNameFn) {
+	return osl.openSearchConnection.setIndexSharder(sharderFn)
 }

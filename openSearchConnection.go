@@ -22,6 +22,7 @@ type (
 		refChangeCh        chan *refRequest
 		wakeCh             chan struct{}
 		emergencyFn        OslEmergencyFn
+		sharderFn          OslShardNameFn
 		messagesQueued     int
 		messagesSent       int
 		messagesSentFailed int
@@ -68,10 +69,20 @@ func newOpenSearchConnection(config *OslConfig) (osc *openSearchConnection, err 
 	return
 }
 
-func (osc *openSearchConnection) setEmergencyHandler(emergencyFn OslEmergencyFn) {
+func (osc *openSearchConnection) setEmergencyHandler(emergencyFn OslEmergencyFn) (prior OslEmergencyFn) {
 	osc.mu.Lock()
 	defer osc.mu.Unlock()
+	prior = osc.emergencyFn
 	osc.emergencyFn = emergencyFn
+	return
+}
+
+func (osc *openSearchConnection) setIndexSharder(sharderFn OslShardNameFn) (prior OslShardNameFn) {
+	osc.mu.Lock()
+	defer osc.mu.Unlock()
+	prior = osc.sharderFn
+	osc.sharderFn = sharderFn
+	return
 }
 
 func (osc *openSearchConnection) stats() (stats OslStats) {
@@ -138,6 +149,10 @@ func (osc *openSearchConnection) connect(config *OslConfig) (err error) {
 		cfg = *config
 		if cfg.OpenSearchHost == "" || cfg.OpenSearchPort == 0 || cfg.OpenSearchTransport == nil {
 			cfg.offline = true
+		}
+		if cfg.OpenSearchIndex == "" && !cfg.offline {
+			err = ErrIndexNameRequired
+			return
 		}
 		if cfg.LogThreshold == 0 {
 			cfg.LogThreshold = OslDefaultLogThreshold
@@ -263,8 +278,8 @@ func (osc *openSearchConnection) flushInner(client apiClient, final bool) {
 	osc.logBuffer = make([]*OslMessage, 0, len(logBuffer))
 	ef := osc.emergencyFn
 
-	if client == nil {
-		// not connected; final must be true because of check in flush();
+	if client == nil || osc.cfg.OpenSearchIndex == "" {
+		// not connected; final must be true because of check in flush(), or no index is provided;
 		// save to emergency log
 		osc.mu.Unlock()
 		if ef != nil {
@@ -375,7 +390,11 @@ func (osc *openSearchConnection) generateBulkJson(logBuffer []*OslMessage) (json
 	var logDataLine []byte
 
 	for _, logData := range logBuffer {
-		createAction := map[string]any{"create": map[string]any{"_index": osc.cfg.OpenSearchIndex}}
+		index := osc.cfg.OpenSearchIndex
+		if osc.sharderFn != nil && index != "" {
+			index = osc.sharderFn(index)
+		}
+		createAction := map[string]any{"create": map[string]any{"_index": index}}
 		createLine, err = json.Marshal(createAction)
 		if err != nil {
 			osc.emergencyLog("Error marshalling createAction JSON: %v", err)

@@ -23,6 +23,7 @@ type (
 		tl           lane.TestingLane
 		ll           lane.LogLane
 		count        atomic.Int32
+		indicies     []string
 		opensearchapi.Client
 	}
 )
@@ -55,8 +56,9 @@ func (tc *testClient) Bulk(ctx context.Context, req opensearchapi.BulkReq) (*ope
 			return nil, err
 		}
 
-		_, isCreate := reqJson["create"]
+		create, isCreate := reqJson["create"].(map[string]any)
 		if isCreate {
+			tc.indicies = append(tc.indicies, create["_index"].(string))
 			continue
 		}
 

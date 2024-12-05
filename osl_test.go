@@ -2,6 +2,8 @@ package osl
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime"
@@ -28,6 +30,7 @@ const (
 	testOffline
 	testSlow
 	testBulkError
+	testNoIndex
 )
 
 func testMakeFirstOsl(t *testing.T) (tc *testClient, osl OpenSearchLane) {
@@ -38,6 +41,10 @@ func testMakeFirstOslEx(t *testing.T, flags testInitFlag) (tc *testClient, osl O
 	tc = &testClient{}
 	tc.install(t)
 	cfg := OslConfig{}
+
+	if (flags & testNoIndex) == 0 {
+		cfg.OpenSearchIndex = "testing"
+	}
 
 	var pcfg *OslConfig
 	if (flags & testMax10) != 0 {
@@ -338,8 +345,9 @@ func TestOslWithDeadlineExpire(t *testing.T) {
 func TestOslReplaceContext(t *testing.T) {
 	c1 := context.WithValue(context.Background(), kTestBase, kTestBase)
 	cfg := OslConfig{
-		OpenSearchHost: "localhost",
-		OpenSearchPort: 1000,
+		OpenSearchHost:  "localhost",
+		OpenSearchPort:  1000,
+		OpenSearchIndex: "sample",
 	}
 	osl, err := NewOpenSearchLane(c1, &cfg)
 	if err != nil {
@@ -351,6 +359,11 @@ func TestOslReplaceContext(t *testing.T) {
 
 	if tl2.Value(kTestBase) != kTestReplaced {
 		t.Error("Base not replaced")
+	}
+
+	p := tl2.(*openSearchLane)
+	if p.openSearchConnection.cfg.OpenSearchIndex != "sample" {
+		t.Fatal("not inherited")
 	}
 
 	tl3 := tl2.Derive()
@@ -877,7 +890,7 @@ func TestPanicOslDerived(t *testing.T) {
 }
 
 func TestLogTilFull(t *testing.T) {
-	_, osl := testMakeFirstOslEx(t, testMax10|testOffline)
+	_, osl := testMakeFirstOslEx(t, testMax10|testOffline|testNoIndex)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -1133,4 +1146,69 @@ func TestFinalLogEmergencyWrite(t *testing.T) {
 		t.Fatal("expected messages were not send on emergencyHandler")
 	}
 
+}
+
+func TestSharding(t *testing.T) {
+	tc, osl := testMakeFirstOsl(t)
+
+	osl.SetIndexSharder(func(baseName string) string { return baseName + "-123" })
+	osl.Info(100)
+
+	tc.waitForBulk(1)
+
+	stats := osl.Stats()
+	if stats.MessagesQueued != 1 {
+		t.Error("wrong queue count")
+	}
+	if stats.MessagesSent != 1 {
+		t.Error("wrong sent count")
+	}
+
+	if len(tc.indicies) != 1 {
+		t.Error("wrong indicies count")
+	} else if tc.indicies[0] != "testing-123" {
+		t.Errorf("wrong index: %s", tc.indicies[0])
+	}
+}
+
+func TestSharding2(t *testing.T) {
+	tc, osl := testMakeFirstOsl(t)
+
+	count := 0
+	osl.SetIndexSharder(func(baseName string) string { count++; return fmt.Sprintf("%s-%d", baseName, count) })
+	osl.Info(100)
+	osl.Info(101)
+
+	tc.waitForBulk(2)
+
+	stats := osl.Stats()
+	if stats.MessagesQueued != 2 {
+		t.Error("wrong queue count")
+	}
+	if stats.MessagesSent != 2 {
+		t.Error("wrong sent count")
+	}
+
+	if len(tc.indicies) != 2 {
+		t.Error("wrong indicies count")
+	} else if tc.indicies[0] != "testing-1" {
+		t.Errorf("wrong index 1: %s", tc.indicies[0])
+	} else if tc.indicies[1] != "testing-2" {
+		t.Errorf("wrong index 2: %s", tc.indicies[1])
+	}
+}
+
+func TestIndexRequired(t *testing.T) {
+	tc := &testClient{}
+	tc.install(t)
+	cfg := OslConfig{
+		OpenSearchHost:      "localhost",
+		OpenSearchPort:      1000,
+		OpenSearchTransport: &http.Transport{},
+		OpenSearchIndex:     "",
+	}
+	_, err := NewOpenSearchLane(context.Background(), &cfg)
+	if !errors.Is(err, ErrIndexNameRequired) {
+		t.Fatal("expected error")
+	}
 }

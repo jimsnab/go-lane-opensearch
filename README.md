@@ -36,6 +36,23 @@ func myFunc() {
 }
 ```
 
+## Sharding
+
+To shard by using a dynamic index name, assign a sharding callback function to the lane
+after it is created.
+
+```go
+	l.SetIndexSharder(myIndexDecorator)
+```
+
+```go
+func myIndexDecorator(baseName string) (decoratedName string) {
+	return baseName + "-" + time.Now().Format(time.DateOnly)
+}
+```
+
+`SetIndexSharder()` returns the previously configured sharding function, if any.
+
 ## Tee
 It is common to tee the OpenSearchLane with another lane like the standard LogLane,
 so that logging goes to OpenSearch, and to stdout.
@@ -67,6 +84,8 @@ func myEmergencyHandler(logBuffer []*osl.OslMessage) {
 	}	
 }
 ```
+
+`SetEmergencyHandler()` returns the previously configured emergency handler function, if any.
 
 OpenSearch lane configuration allows the client to specify the size of the buffer for
 accumulating logging, and control over the amount of retries.

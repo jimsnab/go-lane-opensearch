@@ -12,8 +12,9 @@ func TestTeeTestDerive(t *testing.T) {
 	tc := &testClient{}
 	tc.install(t)
 	cfg := OslConfig{
-		OpenSearchHost: "localhost",
-		OpenSearchPort: 1000,
+		OpenSearchHost:  "localhost",
+		OpenSearchPort:  1000,
+		OpenSearchIndex: "example",
 	}
 	osl, err := NewOpenSearchLane(context.Background(), &cfg)
 	if err != nil {
