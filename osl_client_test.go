@@ -79,8 +79,49 @@ func TestOslBulkInsert(t *testing.T) {
 	for range 40 {
 		stats := osl.Stats()
 		if stats.MessagesSent == 1 {
-			break
+			return
 		}
 		time.Sleep(time.Millisecond * 10)
 	}
+
+	t.Fatal("didn't see message sent")
+}
+
+func TestOslBulkInsertFail(t *testing.T) {
+	// start the stub server
+	stub := newStubServer(t, nil)
+	defer stub.Close()
+
+	stub.Force401 = true
+
+	protocol, host, port := stub.Connection()
+
+	// create an opensearch lane
+	cfg := OslConfig{
+		OpenSearchProtocol:  protocol,
+		OpenSearchHost:      host,
+		OpenSearchPort:      port,
+		OpenSearchTransport: stub.NewTransport(),
+		OpenSearchIndex:     "sample",
+		LogThreshold:        10,
+		MaxBufferSize:       10,
+		BackoffInterval:     time.Millisecond,
+		BackoffLimit:        time.Millisecond * 10,
+	}
+	osl, err := NewOpenSearchLane(nil, &cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	osl.Info(500)
+
+	for range 40 {
+		stats := osl.Stats()
+		if stats.MessagesSentFailed > 0 {
+			return
+		}
+		time.Sleep(time.Millisecond * 100)
+	}
+
+	t.Fatal("didn't see message send failure")
 }

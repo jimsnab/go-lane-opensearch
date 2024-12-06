@@ -16,9 +16,10 @@ import (
 )
 
 type stubServer struct {
-	server *httptest.Server
-	t      *testing.T
-	wg     *sync.WaitGroup
+	server   *httptest.Server
+	t        *testing.T
+	wg       *sync.WaitGroup
+	Force401 bool
 }
 
 func newStubServer(t *testing.T, wg *sync.WaitGroup) *stubServer {
@@ -34,6 +35,10 @@ func newStubServer(t *testing.T, wg *sync.WaitGroup) *stubServer {
 
 		// handle the _bulk requests
 		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "_bulk") {
+			if s.Force401 {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				t.Errorf("failed to read request body: %v", err)

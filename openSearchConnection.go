@@ -3,6 +3,7 @@ package osl
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -384,8 +385,16 @@ func (osc *openSearchConnection) bulkInsert(client apiClient, logBuffer []*OslMe
 		return
 	}
 
-	_, err = client.Bulk(context.Background(), opensearchapi.BulkReq{Body: strings.NewReader(jsonData)})
+	data, err := client.Bulk(context.Background(), opensearchapi.BulkReq{Body: strings.NewReader(jsonData)})
 	if err != nil {
+		// OpenSearch client assumes all negative responses have JSON bodies, but some, like 401 responses, have plain text.
+		if data != nil {
+			res := data.Inspect().Response
+			if res != nil && res.IsError() {
+				err = errors.New(res.String())
+			}
+		}
+
 		osc.emergencyLog("Error while storing values in opensearch: %v", err)
 		return
 	}
