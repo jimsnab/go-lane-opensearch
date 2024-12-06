@@ -1,7 +1,6 @@
 package osl
 
 import (
-	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -38,6 +37,7 @@ type (
 	// Configuration struct for OpenSearch connection settings.
 	OslConfig struct {
 		offline             bool
+		OpenSearchProtocol  string          `json:"openSearchProtocol"`
 		OpenSearchHost      string          `json:"openSearchHost"`
 		OpenSearchPort      int             `json:"openSearchPort"`
 		OpenSearchUser      string          `json:"openSearchUser"`
@@ -87,7 +87,7 @@ type (
 
 var ErrIndexNameRequired = errors.New("an index name is required")
 
-func NewOpenSearchLane(ctx context.Context, config *OslConfig) (l OpenSearchLane, err error) {
+func NewOpenSearchLane(ctx lane.OptionalContext, config *OslConfig) (l OpenSearchLane, err error) {
 
 	createFn := func(parentLane lane.Lane) (newLane lane.Lane, ll lane.LogLane, writer *log.Logger, err error) {
 		newLane, ll, writer, err = createOpenSearchLane(config, parentLane)

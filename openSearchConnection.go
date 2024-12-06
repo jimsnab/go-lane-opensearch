@@ -147,12 +147,20 @@ func (osc *openSearchConnection) connect(config *OslConfig) (err error) {
 		cfg.offline = true
 	} else {
 		cfg = *config
-		if cfg.OpenSearchHost == "" || cfg.OpenSearchPort == 0 || cfg.OpenSearchTransport == nil {
+		if cfg.OpenSearchHost == "" || cfg.OpenSearchTransport == nil {
 			cfg.offline = true
 		}
 		if cfg.OpenSearchIndex == "" && !cfg.offline {
 			err = ErrIndexNameRequired
 			return
+		}
+		if !cfg.offline {
+			if cfg.OpenSearchProtocol == "" {
+				cfg.OpenSearchProtocol = "https"
+			}
+			if cfg.OpenSearchPort == 0 {
+				cfg.OpenSearchPort = 9200
+			}
 		}
 		if cfg.LogThreshold == 0 {
 			cfg.LogThreshold = OslDefaultLogThreshold
@@ -202,6 +210,7 @@ func (osc *openSearchConnection) processConnection() {
 				client = nil
 			} else {
 				client, req.err = newOpenSearchClient(
+					req.config.OpenSearchProtocol,
 					req.config.OpenSearchHost,
 					req.config.OpenSearchPort,
 					req.config.OpenSearchUser,
@@ -437,14 +446,14 @@ func (osc *openSearchConnection) emergencyLog(formatStr string, args ...any) {
 	}
 }
 
-func realNewOpenSearchClient(openSearchHost string, openSearchPort int, openSearchUser, openSearchPass string, openSearchTransport *http.Transport) (client apiClient, err error) {
+func realNewOpenSearchClient(protocol, host string, port int, user, pass string, transport *http.Transport) (client apiClient, err error) {
 	apicli, err := opensearchapi.NewClient(
 		opensearchapi.Config{
 			Client: opensearch.Config{
-				Transport: openSearchTransport,
-				Addresses: []string{fmt.Sprintf("%s:%d", openSearchHost, openSearchPort)},
-				Username:  openSearchUser,
-				Password:  openSearchPass,
+				Transport: transport,
+				Addresses: []string{fmt.Sprintf("%s://%s:%d", protocol, host, port)},
+				Username:  user,
+				Password:  pass,
 			},
 		},
 	)

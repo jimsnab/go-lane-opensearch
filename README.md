@@ -15,10 +15,9 @@ import (
 	osl "github.com/jimsnab/go-lane-opensearch"
 )
 
-func myFunc() {
+func myFunc() {	
     l, err := osl.NewOpenSearchLane(nil, &osl.OslConfig{
-		OpenSearchHost: "localhost",
-		OpenSearchPort: 9200,
+		OpenSearchHost: "localhost", // default is https and port 9200
 		OpenSearchUser: "admin",
 		OpenSearchPass: "TheAdmin&1",
 		OpenSearchIndex: "logging",
@@ -125,6 +124,7 @@ The server configuration can be changed at any time.
 
 ```go
 	err = l.Reconnect(&osl.OslConfig{
+		OpenSearchProtocol: "https",
 		OpenSearchHost: "localhost",
 		OpenSearchPort: 9200,
 		OpenSearchUser: "admin",
