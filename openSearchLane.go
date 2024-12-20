@@ -77,7 +77,7 @@ type (
 
 	// Interface defining methods for a lane in OpenSearch logging.
 	OpenSearchLane interface {
-		lane.Lane
+		lane.LogLane
 		Reconnect(config *OslConfig) (err error)
 		SetEmergencyHandler(emergencyFn OslEmergencyFn) (prior OslEmergencyFn)
 		SetIndexSharder(sharderFn OslShardNameFn) (prior OslShardNameFn)

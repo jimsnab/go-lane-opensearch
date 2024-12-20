@@ -2,6 +2,7 @@ package osl
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -78,5 +79,24 @@ func TestTeeTestDerive(t *testing.T) {
 
 	if !tlv.VerifyEvents(events) {
 		t.Errorf("Test events don't match")
+	}
+}
+
+func TestTeeTestJourneyId(t *testing.T) {
+	serverLane := lane.NewLogLane(nil)
+
+	tc, osl := testMakeFirstOslEx(t, testNoTees)
+
+	serverLane.AddTee(osl)
+
+	requestLane := serverLane.Derive()
+	requestLane.SetJourneyId("journey")
+
+	requestLane.Info("test")
+	tc.waitForBulk(1)
+
+	sent := tc.EventsToString()
+	if !strings.Contains(sent, "INFO {journey:") {
+		t.Errorf("journey ID did not pass through")
 	}
 }
