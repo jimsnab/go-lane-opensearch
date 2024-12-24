@@ -163,18 +163,19 @@ func (osc *openSearchConnection) connect(config *OslConfig) (err error) {
 				cfg.OpenSearchPort = 9200
 			}
 		}
-		if cfg.LogThreshold == 0 {
-			cfg.LogThreshold = OslDefaultLogThreshold
-		}
-		if cfg.MaxBufferSize == 0 {
-			cfg.MaxBufferSize = OslDefaultMaxBufferSize
-		}
-		if cfg.BackoffInterval == 0 {
-			cfg.BackoffInterval = OslDefaultBackoffInterval
-		}
-		if cfg.BackoffLimit == 0 {
-			cfg.BackoffLimit = OslDefaultBackoffLimit
-		}
+	}
+
+	if cfg.LogThreshold <= 0 {
+		cfg.LogThreshold = OslDefaultLogThreshold
+	}
+	if cfg.MaxBufferSize <= 0 {
+		cfg.MaxBufferSize = OslDefaultMaxBufferSize
+	}
+	if cfg.BackoffInterval <= 0 {
+		cfg.BackoffInterval = OslDefaultBackoffInterval
+	}
+	if cfg.BackoffLimit <= 0 {
+		cfg.BackoffLimit = OslDefaultBackoffLimit
 	}
 
 	// send it to the processing task

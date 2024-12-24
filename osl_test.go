@@ -1212,3 +1212,12 @@ func TestIndexRequired(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestNilConfig(t *testing.T) {
+	osl, err := NewOpenSearchLane(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	osl.Info("test")
+}
